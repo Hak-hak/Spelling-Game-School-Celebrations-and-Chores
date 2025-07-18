@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spelling Game</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: 'Roboto', Helvetica, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 10px;
+            overflow-x: hidden;
+        }
+        #game-container {
+            text-align: center;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 600px;
+            position: relative;
+            overflow: hidden;
+        }
+        input[type="text"] {
+            padding: 10px;
+            font-size: clamp(14px, 4vw, 16px);
+            width: 100%;
+            max-width: 400px;
+            margin: 10px 0;
+            box-sizing: border-box;
+            font-family: 'Roboto', Helvetica, sans-serif;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: clamp(14px, 4vw, 16px);
+            margin: 5px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            touch-action: manipulation;
+            font-family: 'Roboto', Helvetica, sans-serif;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #hint {
+            color: #555;
+            font-style: italic;
+            margin-top: 10px;
+            font-size: clamp(12px, 3.5vw, 14px);
+            user-select: none;
+            font-family: 'Roboto', Helvetica, sans-serif;
+            line-height: 1.5;
+        }
+        #completion {
+            font-size: clamp(14px, 4vw, 18px);
+            font-weight: bold;
+            margin-top: 10px;
+            font-family: 'Roboto', Helvetica, sans-serif;
+        }
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10;
+        }
+        @keyframes firework {
+            0% {
+                transform: translate(0, 0);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--tx), var(--ty));
+                opacity: 0;
+            }
+        }
+        @media (max-width: 600px) {
+            #game-container {
+                padding: 15px;
+            }
+            button {
+                padding: 8px 16px;
+                font-size: clamp(12px, 3.5vw, 14px);
+            }
+            input[type="text"] {
+                font-size: clamp(12px, 3.5vw, 14px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+    <script>
+        // Danh sách câu
+        const sentences = [
+            { english: "I can answer that question.", vietnamese: "Tôi có thể trả lời câu hỏi đó." },
+            { english: "Please raise your hand.", vietnamese: "Vui lòng giơ tay." },
+            { english: "We work in groups.", vietnamese: "Chúng tôi làm việc theo nhóm." },
+            { english: "I like to paint a picture.", vietnamese: "Tôi thích vẽ tranh." },
+            { english: "Be careful when you cut with scissors.", vietnamese: "Hãy cẩn thận khi bạn cắt bằng kéo." },
+            { english: "Glue the paper here.", vietnamese: "Dán giấy vào đây." },
+            { english: "Please use a ruler to draw a line.", vietnamese: "Vui lòng sử dụng thước kẻ để vẽ một đường." },
+            { english: "She always smiles a lot.", vietnamese: "Cô ấy luôn cười rất nhiều." },
+            { english: "I feel nervous before the test.", vietnamese: "Tôi cảm thấy lo lắng trước bài kiểm tra." },
+            { english: "I was surprised to see her.", vietnamese: "Tôi đã bất ngờ khi thấy cô ấy." },
+            { english: "I miss my friends when they are away.", vietnamese: "Tôi nhớ bạn bè khi họ đi vắng." },
+            { english: "We jumped for joy when we won!", vietnamese: "Chúng tôi nhảy lên vì vui mừng khi chiến thắng!" },
+            { english: "We celebrate Christmas in December.", vietnamese: "Chúng tôi ăn mừng Giáng sinh vào tháng Mười Hai." },
+            { english: "Children love to get lucky money during Tet.", vietnamese: "Trẻ em thích nhận tiền lì xì trong dịp Tết." },
+            { english: "They are decorating a Christmas tree.", vietnamese: "Họ đang trang trí cây Giáng sinh." },
+            { english: "We enjoy watching fireworks display.", vietnamese: "Chúng tôi thích xem màn bắn pháo hoa." },
+            { english: "My grandma can make Chưng cake.", vietnamese: "Bà tôi có thể làm bánh chưng." },
+            { english: "I love to watch a lion dance at Tet.", vietnamese: "Tôi thích xem múa lân vào dịp Tết." },
+            { english: "We wear traditional clothes for Tet.", vietnamese: "Chúng tôi mặc quần áo truyền thống vào Tết." },
+            { english: "Have you ever watched a water puppet show?", vietnamese: "Bạn đã từng xem múa rối nước chưa?" },
+            { english: "I like to watch YouTube videos.", vietnamese: "Tôi thích xem video trên YouTube." },
+            { english: "Can we play a video game?", vietnamese: "Chúng ta có thể chơi trò chơi điện tử không?" },
+            { english: "I will send a message to my mom.", vietnamese: "Tôi sẽ gửi tin nhắn cho mẹ tôi." },
+            { english: "I need to charge my phone.", vietnamese: "Tôi cần sạc điện thoại." },
+            { english: "We use a computer for homework.", vietnamese: "Chúng tôi sử dụng máy tính để làm bài tập." },
+            { english: "How about having a picnic in the park?", vietnamese: "Đi dã ngoại ở công viên thì sao?" },
+            { english: "My dad likes to go fishing.", vietnamese: "Bố tôi thích đi câu cá." },
+            { english: "We can fly a kite on a windy day.", vietnamese: "Chúng tôi có thể thả diều vào ngày gió." },
+            { english: "Be careful when you climb a tree!", vietnamese: "Hãy cẩn thận khi bạn trèo cây!" },
+            { english: "We will go to the beach in summer.", vietnamese: "Chúng tôi sẽ đi biển vào mùa hè." },
+            { english: "We will stay in a hotel for our trip.", vietnamese: "Chúng tôi sẽ ở khách sạn cho chuyến đi." },
+            { english: "I need to clean my room.", vietnamese: "Tôi cần dọn phòng." },
+            { english: "Do not forget to make your bed every morning.", vietnamese: "Đừng quên dọn giường mỗi sáng." },
+            { english: "We will decorate our house for Tet.", vietnamese: "Chúng tôi sẽ trang trí nhà cửa cho Tết." },
+            { english: "I will organize my bookshelf this weekend.", vietnamese: "Tôi sẽ sắp xếp kệ sách vào cuối tuần này." },
+            { english: "Please water the plants.", vietnamese: "Vui lòng tưới cây." },
+            { english: "Time to feed the cat.", vietnamese: "Đến giờ cho mèo ăn." },
+            { english: "I walk the dog every day.", vietnamese: "Tôi dắt chó đi dạo mỗi ngày." },
+            { english: "Can you please take out the trash?", vietnamese: "Bạn có thể đổ rác được không?" },
+            { english: "I help my mom wash the dishes.", vietnamese: "Tôi giúp mẹ rửa bát." },
+            { english: "My dad asks to sweep the floor.", vietnamese: "Bố tôi yêu cầu quét sàn." },
+            { english: "I can wash my clothes now.", vietnamese: "Tôi có thể giặt quần áo bây giờ." },
+            { english: "I need to iron my uniform for school.", vietnamese: "Tôi cần ủi đồng phục cho trường." }
+        ];
+
+        // Biến trạng thái
+        let state = {
+            sentences: [],
+            currentIndex: 0,
+            completedCount: 0,
+            isPlaying: false,
+            autoPlayInterval: null,
+            wrongAttempts: 0
+        };
+
+        // Hàm chuẩn hóa chuỗi cho so sánh
+        function normalizeString(str) {
+            if (typeof str !== 'string') {
+                console.warn('Invalid input to normalizeString:', str);
+                return '';
+            }
+            return str
+                .replace(/\s+/g, ' ') // Thay nhiều khoảng trắng bằng một
+                .replace(/[.,!?\–-]/g, '') // Bỏ dấu câu
+                .replace(/[^a-zA-Z0-9\s]/g, '') // Bỏ ký tự đặc biệt khác
+                .trim()
+                .toLowerCase();
+        }
+
+        // Hàm làm sạch chuỗi cho SpeechSynthesisUtterance
+        function sanitizeString(str) {
+            if (typeof str !== 'string') {
+                console.warn('Invalid input to sanitizeString:', str);
+                return '';
+            }
+            return str
+                .replace(/\s+/g, ' ') // Thay nhiều khoảng trắng bằng một
+                .replace(/['"]/g, ' ') // Bỏ dấu nháy đơn và nháy kép
+                .replace(/[^a-zA-Z0-9.,!?\s-]/g, '') // Chỉ giữ chữ cái, số, và dấu câu cơ bản
+                .trim();
+        }
+
+        // Hàm xáo trộn mảng
+        function shuffleArray(array) {
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
+        // Hàm tạo pháo hoa
+        function createFirework() {
+            const input = document.getElementById('userInput');
+            const gameContainer = document.getElementById('game-container');
+            if (!input || !gameContainer) return;
+            const inputRect = input.getBoundingClientRect();
+            const containerRect = gameContainer.getBoundingClientRect();
+            const x = inputRect.left - containerRect.left + inputRect.width / 2;
+            const y = inputRect.top - containerRect.top + inputRect.height / 2;
+
+            for (let i = 0; i < 100; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                const angle = Math.random() * 2 * Math.PI;
+                const distance = Math.random() * 150 + 50;
+                const tx = Math.cos(angle) * distance;
+                const ty = Math.sin(angle) * distance;
+                particle.style.backgroundColor = `rgb(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255})`;
+                particle.style.left = `${x}px`;
+                particle.style.top = `${y}px`;
+                particle.style.setProperty('--tx', `${tx}px`);
+                particle.style.setProperty('--ty', `${ty}px`);
+                particle.style.animation = `firework ${Math.random() * 0.5 + 0.5}s linear forwards`;
+                gameContainer.appendChild(particle);
+                setTimeout(() => particle.remove(), 1000);
+            }
+        }
+
+        // Hàm tạo pháo hoa khi hoàn thành
+        function createCelebrationFireworks() {
+            const gameContainer = document.getElementById('game-container');
+            if (!gameContainer) return;
+            const containerRect = gameContainer.getBoundingClientRect();
+            const containerWidth = containerRect.width;
+            const containerHeight = containerRect.height;
+
+            for (let j = 0; j < 10; j++) {
+                setTimeout(() => {
+                    for (let i = 0; i < 20; i++) {
+                        const particle = document.createElement('div');
+                        particle.className = 'particle';
+                        const x = Math.random() * containerWidth;
+                        const y = Math.random() * containerHeight;
+                        const angle = Math.random() * 2 * Math.PI;
+                        const distance = Math.random() * 150 + 50;
+                        const tx = Math.cos(angle) * distance;
+                        const ty = Math.sin(angle) * distance;
+                        particle.style.backgroundColor = `rgb(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255})`;
+                        particle.style.left = `${x}px`;
+                        particle.style.top = `${y}px`;
+                        particle.style.setProperty('--tx', `${tx}px`);
+                        particle.style.setProperty('--ty', `${ty}px`);
+                        particle.style.animation = `firework ${Math.random() * 0.5 + 0.5}s linear forwards`;
+                        gameContainer.appendChild(particle);
+                        setTimeout(() => particle.remove(), 1000);
+                    }
+                }, j * 200);
+            }
+        }
+
+        // Hàm phát câu
+        function playSentence() {
+            if (state.isPlaying) return;
+            state.isPlaying = true;
+            try {
+                const rawText = state.sentences[state.currentIndex].english;
+                const sanitizedText = sanitizeString(rawText);
+                if (!sanitizedText) {
+                    console.warn(`Empty text after sanitization for sentence ${state.currentIndex + 1}: "${rawText}"`);
+                    state.isPlaying = false;
+                    moveToNextSentence();
+                    return;
+                }
+                console.log(`Playing sentence ${state.currentIndex + 1}/${state.sentences.length}: "${rawText}" (sanitized: "${sanitizedText}")`);
+                const utterance = new SpeechSynthesisUtterance(sanitizedText);
+                utterance.lang = 'en-US';
+                utterance.onend = () => {
+                    state.isPlaying = false;
+                };
+                utterance.onerror = (event) => {
+                    console.error(`SpeechSynthesisUtterance error at sentence ${state.currentIndex + 1}: "${rawText}"`, event);
+                    state.isPlaying = false;
+                    moveToNextSentence();
+                };
+                speechSynthesis.speak(utterance);
+            } catch (error) {
+                console.error(`Error in SpeechSynthesisUtterance at sentence ${state.currentIndex + 1}: "${state.sentences[state.currentIndex].english}"`, error);
+                state.isPlaying = false;
+                moveToNextSentence();
+            }
+        }
+
+        // Hàm tự động phát
+        function startAutoPlay() {
+            if (state.autoPlayInterval) clearInterval(state.autoPlayInterval);
+            state.autoPlayInterval = setInterval(() => {
+                if (!state.isPlaying) {
+                    playSentence();
+                }
+            }, 3000);
+        }
+
+        // Hàm dừng tự động phát
+        function stopAutoPlay() {
+            if (state.autoPlayInterval) {
+                clearInterval(state.autoPlayInterval);
+                state.autoPlayInterval = null;
+            }
+        }
+
+        // Hàm chuyển câu
+        function moveToNextSentence() {
+            state.currentIndex++;
+            if (state.currentIndex >= state.sentences.length) {
+                renderCompletionScreen();
+            } else {
+                const userInput = document.getElementById('userInput');
+                const hint = document.getElementById('hint');
+                const result = document.getElementById('result');
+                const completion = document.getElementById('completion');
+                if (userInput) userInput.value = '';
+                if (hint) hint.textContent = '';
+                if (result) result.textContent = '';
+                if (completion) completion.textContent = `Completed: ${state.completedCount}/43`;
+                playSentence();
+                startAutoPlay();
+            }
+        }
+
+        // Hàm kiểm tra câu trả lời
+        function checkAnswer() {
+            const userInput = document.getElementById('userInput').value;
+            const result = document.getElementById('result');
+            const normalizedInput = normalizeString(userInput);
+            const normalizedCorrect = normalizeString(state.sentences[state.currentIndex].english);
+
+            console.log(`Comparing: Input="${normalizedInput}", Correct="${normalizedCorrect}"`);
+            if (normalizedInput === normalizedCorrect) {
+                stopAutoPlay();
+                result.textContent = "Correct!";
+                result.style.color = "green";
+                for (let i = 0; i < 5; i++) {
+                    setTimeout(createFirework, i * 200);
+                }
+                state.wrongAttempts = 0;
+                state.completedCount++;
+                setTimeout(moveToNextSentence, 2000);
+            } else {
+                state.wrongAttempts++;
+                result.textContent = `Incorrect, try again! (${3 - state.wrongAttempts} attempts left)`;
+                result.style.color = "red";
+                if (state.wrongAttempts >= 3) {
+                    stopAutoPlay();
+                    state.wrongAttempts = 0;
+                    result.textContent = "Moving to next sentence...";
+                    setTimeout(moveToNextSentence, 1000);
+                }
+            }
+        }
+
+        // Hàm hiển thị gợi ý
+        function showHint() {
+            const english = state.sentences[state.currentIndex].english;
+            const vietnamese = state.sentences[state.currentIndex].vietnamese;
+            document.getElementById('hint').textContent = `Hint: ${english} (${vietnamese})`;
+        }
+
+        // Hàm xóa gợi ý
+        function clearHint() {
+            const hint = document.getElementById('hint');
+            if (hint) hint.textContent = '';
+        }
+
+        // Hàm render giao diện bắt đầu
+        function renderStartScreen() {
+            const gameContainer = document.getElementById('game-container');
+            gameContainer.innerHTML = `
+                <h1>Spelling Game: School, Celebrations, and Chores</h1>
+                <p>Click Start to begin the game!</p>
+                <button id="startButton">Start</button>
+            `;
+            document.getElementById('startButton').addEventListener('click', startGame);
+        }
+
+        // Hàm render giao diện game
+        function renderGameScreen() {
+            const gameContainer = document.getElementById('game-container');
+            gameContainer.innerHTML = `
+                <h1>Spelling Game: School, Celebrations, and Chores</h1>
+                <p>Listen and type the sentence you hear:</p>
+                <input type="text" id="userInput" placeholder="Type the sentence here">
+                <br>
+                <button id="playButton">Play Sentence</button>
+                <button id="checkButton">Check Answer</button>
+                <button id="hintButton">Hint</button>
+                <button id="resetButton">Reset Game</button>
+                <p id="completion">Completed: 0/43</p>
+                <p id="hint"></p>
+                <p id="result"></p>
+            `;
+            document.getElementById('playButton').addEventListener('click', playSentence);
+            document.getElementById('checkButton').addEventListener('click', checkAnswer);
+            document.getElementById('hintButton').addEventListener('click', showHint);
+            document.getElementById('resetButton').addEventListener('click', resetGame);
+            document.getElementById('userInput').addEventListener('focus', clearHint);
+            document.getElementById('userInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') checkAnswer();
+            });
+            document.getElementById('hint').addEventListener('copy', (e) => e.preventDefault());
+        }
+
+        // Hàm render giao diện hoàn thành
+        function renderCompletionScreen() {
+            const gameContainer = document.getElementById('game-container');
+            gameContainer.innerHTML = `
+                <h1>Congratulations! You have completed ${state.completedCount} sentences!</h1>
+                <button id="resetButton">Play Again</button>
+            `;
+            document.getElementById('resetButton').addEventListener('click', resetGame);
+            createCelebrationFireworks();
+        }
+
+        // Hàm bắt đầu game
+        function startGame() {
+            state.sentences = shuffleArray(sentences);
+            state.currentIndex = 0;
+            state.completedCount = 0;
+            state.wrongAttempts = 0;
+            state.isPlaying = false;
+            stopAutoPlay();
+            renderGameScreen();
+            playSentence();
+            startAutoPlay();
+        }
+
+        // Hàm reset game
+        function resetGame() {
+            stopAutoPlay();
+            state.sentences = shuffleArray(sentences);
+            state.currentIndex = 0;
+            state.completedCount = 0;
+            state.wrongAttempts = 0;
+            state.isPlaying = false;
+            renderStartScreen();
+        }
+
+        // Khởi tạo
+        renderStartScreen();
+    </script>
+</body>
+</html>
