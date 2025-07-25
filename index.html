@@ -147,7 +147,6 @@
             { english: "I can wash my clothes now.", vietnamese: "Tôi có thể giặt quần áo bây giờ." },
             { english: "I need to iron my uniform for school.", vietnamese: "Tôi cần ủi đồng phục cho trường." }
         ];
-
         // Biến trạng thái
         let state = {
             sentences: [],
@@ -324,7 +323,7 @@
             }
         }
 
-        // Hàm kiểm tra câu trả lời
+        // Hàm kiểm tra câu trả lời (ĐÃ SỬA ĐỔI)
         function checkAnswer() {
             const userInput = document.getElementById('userInput').value;
             const result = document.getElementById('result');
@@ -332,20 +331,33 @@
             const normalizedCorrect = normalizeString(state.sentences[state.currentIndex].english);
 
             console.log(`Comparing: Input="${normalizedInput}", Correct="${normalizedCorrect}"`);
+            
             if (normalizedInput === normalizedCorrect) {
                 stopAutoPlay();
-                result.textContent = "Correct!";
-                result.style.color = "green";
-                for (let i = 0; i < 5; i++) {
-                    setTimeout(createFirework, i * 200);
+                
+                // Nếu đúng ở lần 1 hoặc 2, cộng điểm
+                if (state.wrongAttempts < 2) {
+                    result.textContent = "Correct!";
+                    result.style.color = "green";
+                    for (let i = 0; i < 5; i++) {
+                        setTimeout(createFirework, i * 200);
+                    }
+                    state.completedCount++; // Cộng điểm
+                } else {
+                    // Nếu đúng ở lần 3, không cộng điểm
+                    result.textContent = "Correct! Moving to the next sentence.";
+                    result.style.color = "blue"; // Thông báo cho người chơi
                 }
-                state.wrongAttempts = 0;
-                state.completedCount++;
-                setTimeout(moveToNextSentence, 2000);
+                
+                state.wrongAttempts = 0; // Reset số lần sai cho câu mới
+                setTimeout(moveToNextSentence, 2000); // Chuyển câu tiếp theo
+
             } else {
                 state.wrongAttempts++;
                 result.textContent = `Incorrect, try again! (${3 - state.wrongAttempts} attempts left)`;
                 result.style.color = "red";
+                
+                // Nếu sai quá 3 lần, chuyển câu
                 if (state.wrongAttempts >= 3) {
                     stopAutoPlay();
                     state.wrongAttempts = 0;
